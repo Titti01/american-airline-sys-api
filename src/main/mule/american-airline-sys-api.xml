@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:american-flights-api="http://www.mulesoft.org/schema/mule/american-flights-api" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/american-flights-api http://www.mulesoft.org/schema/mule/american-flights-api/current/mule-american-flights-api.xsd">
+	<http:listener-config name="american-airline-sys-api-HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="82109169-f425-4c88-8e79-88e6ac80b857" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<american-flights-api:config name="American_Airline_Sys1_API_Config" doc:name="American Flights API Config" doc:id="ddf8a4cb-0136-4519-b1e4-62484e73e897" property_host="${american.host}" property_port="${american.port}" property_basePath="${american.basepath}" property_protocol="${american.protocol}" />
+	<configuration-properties doc:name="Configuration properties" doc:id="c684738c-4369-48ec-9ba3-6a227adc6653" file="american-sys.yaml" />
+	<flow doc:id="0a930887-f187-4ea5-b597-d723048e2f4d" name="Get-flight-Flow">
+		<http:listener doc:name="/american" doc:id="ba4651b5-683f-494d-b2e0-09b2a39857c5" config-ref="american-airline-sys-api-HTTP_Listener_config" path="/american">
+		</http:listener>
+		<american-flights-api:get-flights doc:name="Get flights" doc:id="c4157447-40f4-460c-90b5-ec6459da9fd2" client-id="${american.client_id}" client-secret="${american.client_secret}" config-ref="American_Airline_Sys1_API_Config"/>
+		<logger level="INFO" doc:name="Logger" doc:id="e852d65f-1c75-42f2-a86a-c3f1e93df286" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="d969a477-424f-4a3c-a384-183767aaea96" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map (object, index) -> {
+    
+        "Airline": "American",
+        "ID": object.ID,
+        "code": object.code,
+        "price": object.price,
+        "departureDate": object.departureDate,
+        "origin": object.origin,
+        "destination": object.destination,
+        "emptySeats": object.emptySeats,
+        "plane": {
+            "type": object.plane."type",
+            "totalSeats": object.plane.totalSeats
+        }
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="American" doc:id="a15b071a-c3d0-40ea-abe1-8d33e743b9a1" message="get flight flow end: #[payload]" />
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="4e56d13a-0780-42c3-853f-552cefde7f89" />
+			<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="d2d6a96b-81c5-4e6c-833b-6697a4238c84" />
+		</error-handler>
+	</flow>
+</mule>
